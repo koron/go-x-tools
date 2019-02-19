@@ -108,7 +108,7 @@ func Diagnostics(ctx context.Context, v View, uri URI) (map[string][]Diagnostic,
 		return reports, nil
 	}
 	// Type checking and parsing succeeded. Run analyses.
-	runAnalyses(v.GetAnalysisCache(), pkg, func(a *analysis.Analyzer, diag analysis.Diagnostic) {
+	runAnalyses(NewAnalysisCache(), pkg, func(a *analysis.Analyzer, diag analysis.Diagnostic) {
 		pos := pkg.Fset.Position(diag.Pos)
 		category := a.Name
 		if diag.Category != "" {
