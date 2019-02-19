@@ -12,6 +12,8 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +31,8 @@ type Serve struct {
 	Mode    string `flag:"mode" help:"no effect"`
 	Port    int    `flag:"port" help:"port on which to run gopls for debugging purposes"`
 	Address string `flag:"listen" help:"address on which to listen for remote connections"`
+
+	PprofServer string `flag:"pprof.server" help:"address to enable pprof server"`
 
 	app *Application
 }
@@ -67,6 +71,11 @@ func (s *Serve) Run(ctx context.Context, args ...string) error {
 		defer f.Close()
 		log.SetOutput(io.MultiWriter(os.Stderr, f))
 		out = f
+	}
+	if s.PprofServer != "" {
+		go func() {
+			log.Println(http.ListenAndServe(s.PprofServer, nil))
+		}()
 	}
 	if s.app.Remote != "" {
 		return s.forward()
