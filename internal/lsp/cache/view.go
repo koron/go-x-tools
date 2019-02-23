@@ -159,7 +159,7 @@ func (v *View) parse(uri source.URI) error {
 			go imp.Import(importPath)
 		}
 		log.Printf("parse->importPackage: %s", pkg.PkgPath)
-		imp.importPackage(pkg.PkgPath)
+		imp.importPackage(pkg.PkgPath, true)
 
 		// Add every file in this package to our cache.
 		for _, file := range pkg.Syntax {
@@ -236,13 +236,13 @@ func (imp *importer) Import(path string) (*types.Package, error) {
 
 		// This goroutine becomes responsible for populating
 		// the entry and broadcasting its readiness.
-		e.pkg, e.err = imp.importPackage(path)
+		e.pkg, e.err = imp.importPackage(path, false)
 		close(e.ready)
 	}
 	return e.pkg, e.err
 }
 
-func (imp *importer) importPackage(pkgPath string) (*types.Package, error) {
+func (imp *importer) importPackage(pkgPath string, checkBody bool) (*types.Package, error) {
 	log.Printf("importPackage: BEGIN %s", pkgPath)
 	imp.mu.Lock()
 	pkg, ok := imp.packages[pkgPath]
@@ -261,8 +261,9 @@ func (imp *importer) importPackage(pkgPath string) (*types.Package, error) {
 	}
 	pkg.Syntax = files
 	cfg := &types.Config{
-		Error:    appendError,
-		Importer: imp,
+		IgnoreFuncBodies: !checkBody,
+		Error:            appendError,
+		Importer:         imp,
 	}
 	pkg.Types = types.NewPackage(pkg.PkgPath, pkg.Name)
 	pkg.TypesInfo = &types.Info{
