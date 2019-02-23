@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"go/token"
+	"log"
 	"strconv"
 	"strings"
 
@@ -46,11 +47,14 @@ type Diagnostic struct {
 }
 
 func Diagnostics(ctx context.Context, v View, uri URI) (map[string][]Diagnostic, error) {
+	log.Print("Diagnostics, running")
 	f, err := v.GetFile(ctx, uri)
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("Diagnostics, GetFile: %s", uri)
 	pkg := f.GetPackage()
+	log.Printf("Diagnostics, GetPackage")
 	// Prepare the reports we will send for this package.
 	reports := make(map[string][]Diagnostic)
 	for _, filename := range pkg.GoFiles {
@@ -75,6 +79,7 @@ func Diagnostics(ctx context.Context, v View, uri URI) (map[string][]Diagnostic,
 	}
 	for _, diag := range diags {
 		pos := errorPos(diag)
+		log.Printf("Diagnostics, GetFile2: %s", ToURI(pos.Filename))
 		diagFile, err := v.GetFile(ctx, ToURI(pos.Filename))
 		if err != nil {
 			continue
@@ -107,6 +112,7 @@ func Diagnostics(ctx context.Context, v View, uri URI) (map[string][]Diagnostic,
 	if len(diags) > 0 {
 		return reports, nil
 	}
+	log.Printf("Diagnostic, analysing")
 	// Type checking and parsing succeeded. Run analyses.
 	runAnalyses(NewAnalysisCache(), pkg, func(a *analysis.Analyzer, diag analysis.Diagnostic) {
 		pos := pkg.Fset.Position(diag.Pos)
@@ -121,6 +127,7 @@ func Diagnostics(ctx context.Context, v View, uri URI) (map[string][]Diagnostic,
 			Message: fmt.Sprintf(diag.Message),
 		})
 	})
+	log.Printf("Diagnostics, completed")
 
 	return reports, nil
 }

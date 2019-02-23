@@ -121,6 +121,7 @@ func (v *View) getFile(uri source.URI) *File {
 }
 
 func (v *View) parse(uri source.URI) error {
+	log.Printf("parse: %s", uri)
 	path, err := uri.Filename()
 	if err != nil {
 		return err
@@ -133,6 +134,7 @@ func (v *View) parse(uri source.URI) error {
 		}
 		return err
 	}
+	log.Print("parse->Load")
 	var foundPkg bool // true if we found the package for uri
 	parsedPkg := map[string]struct{}{}
 	for _, pkg := range pkgs {
@@ -156,6 +158,7 @@ func (v *View) parse(uri source.URI) error {
 		for importPath := range pkg.Imports {
 			go imp.Import(importPath)
 		}
+		log.Printf("parse->importPackage: %s", pkg.PkgPath)
 		imp.importPackage(pkg.PkgPath)
 
 		// Add every file in this package to our cache.
@@ -240,10 +243,12 @@ func (imp *importer) Import(path string) (*types.Package, error) {
 }
 
 func (imp *importer) importPackage(pkgPath string) (*types.Package, error) {
+	log.Printf("importPackage: BEGIN %s", pkgPath)
 	imp.mu.Lock()
 	pkg, ok := imp.packages[pkgPath]
 	imp.mu.Unlock()
 	if !ok {
+		log.Printf("importPackage: FAIL1 %s", pkgPath)
 		return nil, fmt.Errorf("no metadata for %v", pkgPath)
 	}
 	pkg.Fset = imp.v.Config.Fset
@@ -271,6 +276,7 @@ func (imp *importer) importPackage(pkgPath string) (*types.Package, error) {
 	check := types.NewChecker(cfg, imp.v.Config.Fset, pkg.Types, pkg.TypesInfo)
 	check.Files(pkg.Syntax)
 
+	log.Printf("importPackage: END %s", pkgPath)
 	return pkg.Types, nil
 }
 
@@ -317,6 +323,11 @@ var ioLimit = make(chan bool, 20)
 // positions of the resulting ast.Files are not ordered.
 //
 func (imp *importer) parseFiles(filenames []string) ([]*ast.File, []error) {
+	first := "(none)"
+	if len(filenames) > 0 {
+		first = filenames[0]
+	}
+	log.Printf("parseFiles: %d files (first:%s)", len(filenames), first)
 	var wg sync.WaitGroup
 	n := len(filenames)
 	parsed := make([]*ast.File, n)
@@ -388,6 +399,7 @@ func (imp *importer) parseFiles(filenames []string) ([]*ast.File, []error) {
 	}
 	errors = errors[:o]
 
+	log.Printf("parseFiles: END (first:%s)", first)
 	return parsed, errors
 }
 
