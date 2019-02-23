@@ -134,7 +134,12 @@ func (v *View) parse(uri source.URI) error {
 		return err
 	}
 	var foundPkg bool // true if we found the package for uri
+	parsedPkg := map[string]struct{}{}
 	for _, pkg := range pkgs {
+		if _, ok := parsedPkg[pkg.PkgPath]; ok {
+			continue
+		}
+		parsedPkg[pkg.PkgPath] = struct{}{}
 		// TODO(rstambler): Get real TypeSizes from go/packages (golang.org/issues/30139).
 		pkg.TypesSizes = &types.StdSizes{}
 
